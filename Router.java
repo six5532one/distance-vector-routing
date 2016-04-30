@@ -3,17 +3,23 @@ import java.util.AbstractMap;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.net.UnknownHostException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
+import java.io.IOException;
 
 class Router    {
-    private final ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> neighbors;
+    final ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> neighbors;
+    private int PAYLOAD_SIZE = 500;
     private final ArrayList<Double> neighborCosts;
     // does not include self; adds entry for self when it advertises to neighbors
     HashMap<Integer, Double> distVec;
     private ArrayList<HashMap<Integer, Double>> neighborsDistVecs;
-    private DatagramSocket outSocket;
-    DatagramSocket inSocket;
+    int listenPort;
+    DatagramSocket outSocket;
+    private DatagramSocket inSocket;
     
-    private HashMap<Integer, Double> initializeDistVec()    {
+    private void initializeDistVec()    {
         for (Double cost: neighborCosts) {
             int index = neighborCosts.indexOf(cost);
             distVec.put(index, cost);
@@ -21,19 +27,37 @@ class Router    {
     }
 
     public Router(int listenPort, ArrayList<Double> costs, ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> interfaceTuples) {
+        this.listenPort = listenPort;
         neighbors = interfaceTuples;
         neighborCosts = costs;
-        distVec = initializeDistVec();
-        inSocket = new DatagramSocket(listenPort); 
-        outSocket = new DatagramSocket();
+        distVec = new HashMap<Integer, Double>();
+        initializeDistVec();
+        try {
+            inSocket = new DatagramSocket(listenPort); 
+            outSocket = new DatagramSocket();
+        }   catch (SocketException e)   {
+            System.out.println("Socket could not be opened, or the socket could not bind to the specified port. Exiting...");
+            System.exit(0);
+        }
         Advertiser advertiser = new Advertiser(this);
         new Thread(advertiser).start();
     }
-
-    private void advertise()    {
-        // create packet header with source IP and port
-        StringBuilder sb = new StringBuilder();
-        // iterate through neighbors, send to each one
+    
+    private void route()    {
+        byte[] receiveData;
+        DatagramPacket response;
+        while (true)    {
+            receiveData = new byte[PAYLOAD_SIZE];
+            response = new DatagramPacket(receiveData, receiveData.length);
+            try {
+                inSocket.receive(response);
+            byte[] received = response.getData();
+            System.out.println(new String(received));
+            }   catch (IOException e)   {
+                System.out.println("I/O error occurred while reading from socket. Exiting...");
+                System.exit(0);
+            }
+        }
     }
 
     public static void main(String[] args)  {
@@ -58,6 +82,6 @@ class Router    {
             }
         }
         Router router = new Router(listenPort, costs, interfaceTuples);
-        router.advertise();
+        router.route();
     }
 }
