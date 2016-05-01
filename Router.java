@@ -14,7 +14,7 @@ class Router    {
     private final ArrayList<Double> neighborCosts;
     // does not include self; adds entry for self when it advertises to neighbors
     HashMap<Integer, Double> distVec;
-    private ArrayList<HashMap<Integer, Double>> neighborsDistVecs;
+    private ArrayList<HashMap<String, Double>> neighborsDistVecs;
     int listenPort;
     DatagramSocket outSocket;
     private DatagramSocket inSocket;
@@ -25,6 +25,12 @@ class Router    {
             distVec.put(index, cost);
         }
     }
+    
+    private void initializeNeighborDVs()    {
+        for (AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor: neighbors) {
+            neighborsDistVecs.add(new HashMap<String, Double>());
+        }
+    }
 
     public Router(int listenPort, ArrayList<Double> costs, ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> interfaceTuples) {
         this.listenPort = listenPort;
@@ -32,7 +38,8 @@ class Router    {
         neighborCosts = costs;
         distVec = new HashMap<Integer, Double>();
         initializeDistVec();
-        neighborsDistVecs = new ArrayList<HashMap<Integer, Double>>();
+        neighborsDistVecs = new ArrayList<HashMap<String, Double>>();
+        initializeNeighborDVs();
         try {
             inSocket = new DatagramSocket(listenPort); 
             outSocket = new DatagramSocket();
@@ -43,7 +50,18 @@ class Router    {
         Advertiser advertiser = new Advertiser(this);
         new Thread(advertiser).start();
     }
-    
+   
+    private HashMap<String, Double> parseAdForDistVec(String adPayload) {
+        HashMap<String, Double> result = new HashMap<String, Double>();
+        String[] entries = adPayload.trim().split(":");
+        for (int i=0; i<entries.length; i++)    {
+            String[] entryComponents = entries[i].split(" ");
+            double distance = Double.parseDouble(entryComponents[2]);
+            result.put(entryComponents[0].concat(" ").concat(entryComponents[1]), distance);
+        }
+        return result;
+    }
+
     private void route()    {
         byte[] receiveData;
         DatagramPacket response;
@@ -64,10 +82,17 @@ class Router    {
                         neighborIp = InetAddress.getByName(packetComponents[i]);
                     }   catch (UnknownHostException e)  {}
                     if ((neighborIndex = neighbors.indexOf(new AbstractMap.SimpleImmutableEntry<InetAddress,Integer>(neighborIp, neighborPort))) > -1)  {
-                        System.out.println("this message is from neighbor "+packetComponents[i]);
-                        System.out.println(neighborIndex+1);
+                        HashMap<String, Double> neighborDV = parseAdForDistVec(payload);
+                        if (!(neighborDV.equals(neighborsDistVecs.get(neighborIndex)))) {
+                            neighborsDistVecs.set(neighborIndex, neighborDV);
+                            System.out.println("Updated distance vector for "+packetComponents[i]+": "+payload);
+                        }
+                        else    {
+                            System.out.println("distance vector for "+packetComponents[i]+" hasn't changed");
+                        }
+                        break;
                     }
-                }
+                }   // updated dist vec for the neighbor that sent the ad
             }   catch (IOException e)   {
                 System.out.println("I/O error occurred while reading from socket. Exiting...");
                 System.exit(0);

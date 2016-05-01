@@ -33,22 +33,39 @@ class Advertiser extends Thread    {
         return sb.toString();
     }
 
+    private String getPayload() {
+        StringBuilder sb = new StringBuilder();
+        for (Integer neighborIndex: router.distVec.keySet())   {
+            AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor = router.neighbors.get(neighborIndex);
+            String neighborIpStr = neighbor.getKey().getHostAddress();
+            int neighborPort = neighbor.getValue();
+            double neighborDist = router.distVec.get(neighborIndex);
+            sb.append(neighborIpStr).append(" ").append(neighborPort).append(" ").append(neighborDist).append(":");
+        }
+        return sb.toString();
+    }
+
     public void run()   {
         String potentialIPsForThisHost = getAllLocalIPAddresses();
-        //String thisHostId = InetAddress.getLocalHost().getHostAddress().concat("/").concat(String.valueOf(router.listenPort));
-        //System.out.println(thisHostId);
-        String payload = "hi neighbor:hi again neighbor";
-        String msg = potentialIPsForThisHost.concat(String.valueOf(router.listenPort)).concat("/").concat(payload);
-        byte[] sendData = msg.getBytes();
-        for (AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor: router.neighbors)  {
-            InetAddress destIP = neighbor.getKey();
-            int destPort = neighbor.getValue();
-            DatagramPacket advertisement = new DatagramPacket(sendData, sendData.length, destIP, destPort);
+        while (true)    {
+            String payload = getPayload();
+            String msg = potentialIPsForThisHost.concat(String.valueOf(router.listenPort)).concat("/").concat(payload);
+            byte[] sendData = msg.getBytes();
+            for (AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor: router.neighbors)  {
+                InetAddress destIP = neighbor.getKey();
+                int destPort = neighbor.getValue();
+                DatagramPacket advertisement = new DatagramPacket(sendData, sendData.length, destIP, destPort);
+                try {
+                    router.outSocket.send(advertisement);
+                }   catch (IOException e)   {
+                    System.out.println("I/O error occurred while sending advertisement to neighbor. Exiting...");
+                    System.exit(0);
+                }
+            }
             try {
-                router.outSocket.send(advertisement);
-            }   catch (IOException e)   {
-                System.out.println("I/O error occurred while sending advertisement to neighbor. Exiting...");
-                System.exit(0);
+                Thread.sleep(5000);
+            }   catch (InterruptedException e)  {
+                System.out.println("a thread has interrupted this thread's sleep interval");
             }
         }
     }
