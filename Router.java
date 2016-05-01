@@ -1,3 +1,4 @@
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.AbstractMap;
 import java.net.InetAddress;
@@ -85,10 +86,6 @@ class Router    {
         initializeMyIp();
         forwardTo = new HashMap<String, Integer>();
         initializeForwardTable();
-        /*
-        for (String s: forwardTo.keySet())
-            System.out.println(s+" " + Integer.toString(forwardTo.get(s)));
-        */
         Advertiser advertiser = new Advertiser(this);
         new Thread(advertiser).start();
     }
@@ -130,6 +127,11 @@ class Router    {
     }
 
     private void displayRoutingTable()  { 
+        Date curTime = new Date();
+        StringBuilder header = new StringBuilder("Node ");
+        header.append(Router.getNeighborIdString(myIp, listenPort))
+            .append(" @ ").append(curTime.toString());
+        System.out.println(header.toString());
         System.out.println("host            port    distance    interface");
         for (String nodeIdStr: distVec.keySet())    {
             int interfaceNum = forwardTo.get(nodeIdStr);
