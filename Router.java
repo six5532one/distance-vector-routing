@@ -70,8 +70,21 @@ class Router    {
     }
     
     private HashMap<String, Double> updateDistVec() {
-        System.out.println("TODO updateDistVec()");
-        return distVec;
+        HashMap<String, Double> result = new HashMap<String, Double>();
+        // iterate through each neighbor's dist vec
+        for (HashMap<String, Double> neighborDV: neighborsDistVecs) {
+            int neighborIndex = neighborsDistVecs.indexOf(neighborDV);
+            for (String nodeIdStr: neighborDV.keySet()) {
+                double distToNodeViaThisNeighbor = neighborCosts.get(neighborIndex) + neighborDV.get(nodeIdStr);
+                if (result.containsKey(nodeIdStr))  { 
+                    if (distToNodeViaThisNeighbor < result.get(nodeIdStr))
+                        result.put(nodeIdStr, distToNodeViaThisNeighbor);
+                }
+                else
+                    result.put(nodeIdStr, distToNodeViaThisNeighbor);
+            }
+        }
+        return result;
     }
 
     private void displayRoutingTable()  {
@@ -110,8 +123,6 @@ class Router    {
                     if ((neighborIndex = neighbors.indexOf(new AbstractMap.SimpleImmutableEntry<InetAddress,Integer>(neighborIp, neighborPort))) > -1)  {
                         HashMap<String, Double> neighborDV = parseAdForDistVec(payload, neighborIp, neighborPort);
                         if (!(neighborDV.equals(neighborsDistVecs.get(neighborIndex)))) {
-                            displayRoutingTable();
-                            System.out.println("gonna update DV for "+packetComponents[i]);
                             // update distance vector for this neighbor
                             neighborsDistVecs.set(neighborIndex, neighborDV);
                             HashMap<String, Double> recomputed = updateDistVec();
