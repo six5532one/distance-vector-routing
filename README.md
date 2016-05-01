@@ -13,7 +13,7 @@ The payload at the end of each advertisement has the format:
 
 Testing
 =======
-I ran these commands to test the program:
+To execute the routing algorithm on the topology shown [here](), run the following commands:
 ```
 // Node X (bern.clic.cs.columbia.edu)
 $ ssh ec2805@128.59.15.59
