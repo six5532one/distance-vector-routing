@@ -16,6 +16,7 @@ class Router    {
     HashMap<String, Double> distVec;
     private ArrayList<HashMap<String, Double>> neighborsDistVecs;
     int listenPort;
+    private InetAddress myIp;
     DatagramSocket outSocket;
     private DatagramSocket inSocket;
     
@@ -38,9 +39,30 @@ class Router    {
         }
     }
 
+    private void initializeMyIp()   {
+        byte[] receiveData = new byte[PAYLOAD_SIZE];
+        DatagramPacket response;
+        while (myIp == null)    {
+            response = new DatagramPacket(receiveData, receiveData.length);
+            try {
+                inSocket.receive(response); 
+                String received = new String(response.getData());
+                try {
+                    myIp = InetAddress.getByName(received.trim());
+                    System.out.println("initialized my ip");
+                    System.out.println(myIp);
+                }   catch (UnknownHostException e)  {} 
+            }   catch (IOException e)   {
+                System.out.println("I/O error occurred while reading from socket. Exiting...");
+                System.exit(0);
+            }
+            receiveData = new byte[PAYLOAD_SIZE];
+        }
+    }
+
     public Router(int listenPort, ArrayList<Double> costs, ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> interfaceTuples) {
         this.listenPort = listenPort;
-        neighbors = interfaceTuples;
+        neighbors = interfaceTuples; 
         neighborCosts = costs;
         distVec = new HashMap<String, Double>();
         initializeDistVec();
@@ -53,6 +75,8 @@ class Router    {
             System.out.println("Socket could not be opened, or the socket could not bind to the specified port. Exiting...");
             System.exit(0);
         }
+        new Thread(new AddressVerifier(this)).start();
+        initializeMyIp();
         Advertiser advertiser = new Advertiser(this);
         new Thread(advertiser).start();
     }
@@ -112,6 +136,8 @@ class Router    {
                 inSocket.receive(response);
                 String received = new String(response.getData());
                 String[] packetComponents = received.trim().split("/");
+                if (packetComponents.length < 3)
+                    continue;
                 String payload = packetComponents[packetComponents.length-1];
                 int neighborPort = Integer.parseInt(packetComponents[packetComponents.length-2]);
                 InetAddress neighborIp = null;
