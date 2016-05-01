@@ -13,7 +13,7 @@ The payload at the end of each advertisement has the format:
 
 Testing
 =======
-To execute the routing algorithm on the topology shown [here](), run the following commands:
+To execute the routing algorithm on the topology shown [here](https://github.com/six5532one/distance-vector-routing/blob/master/sample_topology.jpg), run the following commands:
 ```
 // Node X (bern.clic.cs.columbia.edu)
 $ ssh ec2805@128.59.15.59
