@@ -13,7 +13,7 @@ class Router    {
     private int PAYLOAD_SIZE = 500;
     private final ArrayList<Double> neighborCosts;
     // does not include self; adds entry for self when it advertises to neighbors
-    HashMap<Integer, Double> distVec;
+    HashMap<String, Double> distVec;
     private ArrayList<HashMap<String, Double>> neighborsDistVecs;
     int listenPort;
     DatagramSocket outSocket;
@@ -22,10 +22,16 @@ class Router    {
     private void initializeDistVec()    {
         for (Double cost: neighborCosts) {
             int index = neighborCosts.indexOf(cost);
-            distVec.put(index, cost);
+            AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor = neighbors.get(index);
+            String distVecKey = Router.getNeighborIdString(neighbor.getKey(), neighbor.getValue());
+            distVec.put(distVecKey, cost);
         }
     }
     
+    public static String getNeighborIdString(InetAddress ip, int port)  {
+        return ip.getHostAddress().concat(" ").concat(String.valueOf(port));
+    }
+
     private void initializeNeighborDVs()    {
         for (AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor: neighbors) {
             neighborsDistVecs.add(new HashMap<String, Double>());
@@ -36,7 +42,7 @@ class Router    {
         this.listenPort = listenPort;
         neighbors = interfaceTuples;
         neighborCosts = costs;
-        distVec = new HashMap<Integer, Double>();
+        distVec = new HashMap<String, Double>();
         initializeDistVec();
         neighborsDistVecs = new ArrayList<HashMap<String, Double>>();
         initializeNeighborDVs();
@@ -51,7 +57,7 @@ class Router    {
         new Thread(advertiser).start();
     }
    
-    private HashMap<String, Double> parseAdForDistVec(String adPayload) {
+    private HashMap<String, Double> parseAdForDistVec(String adPayload, InetAddress neighborIp, int neighborPort) {
         HashMap<String, Double> result = new HashMap<String, Double>();
         String[] entries = adPayload.trim().split(":");
         for (int i=0; i<entries.length; i++)    {
@@ -59,7 +65,28 @@ class Router    {
             double distance = Double.parseDouble(entryComponents[2]);
             result.put(entryComponents[0].concat(" ").concat(entryComponents[1]), distance);
         }
+        result.put(Router.getNeighborIdString(neighborIp, neighborPort), 0.0);
         return result;
+    }
+    
+    private HashMap<String, Double> updateDistVec() {
+        System.out.println("TODO updateDistVec()");
+        return distVec;
+    }
+
+    private void displayRoutingTable()  {
+        //TODO receive message from neighbor to confirm self IP addr
+        int interfaceNum = 10;
+        System.out.println("host            port    distance    interface");
+        for (String neighborIdStr: distVec.keySet())    {
+            String[] neighborIdComponents = neighborIdStr.split(" ");
+            StringBuilder sb = new StringBuilder();
+            sb.append(neighborIdComponents[0])
+                .append("\t").append(neighborIdComponents[1])
+                .append("\t").append(distVec.get(neighborIdStr))
+                .append("\t").append("\t").append(interfaceNum);
+            System.out.println(sb.toString());
+        }
     }
 
     private void route()    {
@@ -73,7 +100,6 @@ class Router    {
                 String received = new String(response.getData());
                 String[] packetComponents = received.trim().split("/");
                 String payload = packetComponents[packetComponents.length-1];
-                System.out.println("payload: "+payload);
                 int neighborPort = Integer.parseInt(packetComponents[packetComponents.length-2]);
                 InetAddress neighborIp = null;
                 int neighborIndex;
@@ -82,10 +108,18 @@ class Router    {
                         neighborIp = InetAddress.getByName(packetComponents[i]);
                     }   catch (UnknownHostException e)  {}
                     if ((neighborIndex = neighbors.indexOf(new AbstractMap.SimpleImmutableEntry<InetAddress,Integer>(neighborIp, neighborPort))) > -1)  {
-                        HashMap<String, Double> neighborDV = parseAdForDistVec(payload);
+                        HashMap<String, Double> neighborDV = parseAdForDistVec(payload, neighborIp, neighborPort);
                         if (!(neighborDV.equals(neighborsDistVecs.get(neighborIndex)))) {
+                            displayRoutingTable();
+                            System.out.println("gonna update DV for "+packetComponents[i]);
+                            // update distance vector for this neighbor
                             neighborsDistVecs.set(neighborIndex, neighborDV);
-                            System.out.println("Updated distance vector for "+packetComponents[i]+": "+payload);
+                            HashMap<String, Double> recomputed = updateDistVec();
+                            // display modified routing table
+                            if (!(recomputed.equals(distVec)))    {
+                                distVec = recomputed;
+                                displayRoutingTable();
+                            }
                         }
                         else    {
                             System.out.println("distance vector for "+packetComponents[i]+" hasn't changed");

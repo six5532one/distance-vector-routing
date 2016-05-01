@@ -35,12 +35,9 @@ class Advertiser extends Thread    {
 
     private String getPayload() {
         StringBuilder sb = new StringBuilder();
-        for (Integer neighborIndex: router.distVec.keySet())   {
-            AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor = router.neighbors.get(neighborIndex);
-            String neighborIpStr = neighbor.getKey().getHostAddress();
-            int neighborPort = neighbor.getValue();
-            double neighborDist = router.distVec.get(neighborIndex);
-            sb.append(neighborIpStr).append(" ").append(neighborPort).append(" ").append(neighborDist).append(":");
+        for (String neighborIdStr: router.distVec.keySet())   {
+            double neighborDist = router.distVec.get(neighborIdStr);
+            sb.append(neighborIdStr).append(" ").append(neighborDist).append(":");
         }
         return sb.toString();
     }
