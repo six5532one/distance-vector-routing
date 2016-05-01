@@ -32,6 +32,7 @@ class Router    {
         neighborCosts = costs;
         distVec = new HashMap<Integer, Double>();
         initializeDistVec();
+        neighborsDistVecs = new ArrayList<HashMap<Integer, Double>>();
         try {
             inSocket = new DatagramSocket(listenPort); 
             outSocket = new DatagramSocket();
@@ -51,8 +52,22 @@ class Router    {
             response = new DatagramPacket(receiveData, receiveData.length);
             try {
                 inSocket.receive(response);
-            byte[] received = response.getData();
-            System.out.println(new String(received));
+                String received = new String(response.getData());
+                String[] packetComponents = received.trim().split("/");
+                String payload = packetComponents[packetComponents.length-1];
+                System.out.println("payload: "+payload);
+                int neighborPort = Integer.parseInt(packetComponents[packetComponents.length-2]);
+                InetAddress neighborIp = null;
+                int neighborIndex;
+                for (int i=0; i<packetComponents.length-2; i++)   {
+                    try {
+                        neighborIp = InetAddress.getByName(packetComponents[i]);
+                    }   catch (UnknownHostException e)  {}
+                    if ((neighborIndex = neighbors.indexOf(new AbstractMap.SimpleImmutableEntry<InetAddress,Integer>(neighborIp, neighborPort))) > -1)  {
+                        System.out.println("this message is from neighbor "+packetComponents[i]);
+                        System.out.println(neighborIndex+1);
+                    }
+                }
             }   catch (IOException e)   {
                 System.out.println("I/O error occurred while reading from socket. Exiting...");
                 System.exit(0);
