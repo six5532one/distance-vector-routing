@@ -49,8 +49,6 @@ class Router    {
                 String received = new String(response.getData());
                 try {
                     myIp = InetAddress.getByName(received.trim());
-                    System.out.println("initialized my ip");
-                    System.out.println(myIp);
                 }   catch (UnknownHostException e)  {} 
             }   catch (IOException e)   {
                 System.out.println("I/O error occurred while reading from socket. Exiting...");
@@ -99,6 +97,8 @@ class Router    {
         for (HashMap<String, Double> neighborDV: neighborsDistVecs) {
             int neighborIndex = neighborsDistVecs.indexOf(neighborDV);
             for (String nodeIdStr: neighborDV.keySet()) {
+                if (nodeIdStr.equals(Router.getNeighborIdString(myIp, listenPort)))
+                    continue;
                 double distToNodeViaThisNeighbor = neighborCosts.get(neighborIndex) + neighborDV.get(nodeIdStr);
                 if (result.containsKey(nodeIdStr))  { 
                     if (distToNodeViaThisNeighbor < result.get(nodeIdStr))
@@ -112,7 +112,6 @@ class Router    {
     }
 
     private void displayRoutingTable()  {
-        //TODO receive message from neighbor to confirm self IP addr
         int interfaceNum = 10;
         System.out.println("host            port    distance    interface");
         for (String neighborIdStr: distVec.keySet())    {
@@ -157,10 +156,7 @@ class Router    {
                                 distVec = recomputed;
                                 displayRoutingTable();
                             }
-                        }
-                        else    {
-                            System.out.println("distance vector for "+packetComponents[i]+" hasn't changed");
-                        }
+                        } 
                         break;
                     }
                 }   // updated dist vec for the neighbor that sent the ad
