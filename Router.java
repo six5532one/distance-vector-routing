@@ -14,6 +14,7 @@ class Router    {
     private final ArrayList<Double> neighborCosts;
     // does not include self; adds entry for self when it advertises to neighbors
     HashMap<String, Double> distVec;
+    HashMap<String, Integer> forwardTo;
     private ArrayList<HashMap<String, Double>> neighborsDistVecs;
     int listenPort;
     private InetAddress myIp;
@@ -58,6 +59,13 @@ class Router    {
         }
     }
 
+    private void initializeForwardTable()   {
+        for (AbstractMap.SimpleImmutableEntry<InetAddress,Integer> neighbor: neighbors) {
+            String forwardTableKey = Router.getNeighborIdString(neighbor.getKey(), neighbor.getValue());
+            forwardTo.put(forwardTableKey, neighbors.indexOf(neighbor) + 1);
+        }
+    }
+
     public Router(int listenPort, ArrayList<Double> costs, ArrayList<AbstractMap.SimpleImmutableEntry<InetAddress,Integer>> interfaceTuples) {
         this.listenPort = listenPort;
         neighbors = interfaceTuples; 
@@ -75,6 +83,12 @@ class Router    {
         }
         new Thread(new AddressVerifier(this)).start();
         initializeMyIp();
+        forwardTo = new HashMap<String, Integer>();
+        initializeForwardTable();
+        /*
+        for (String s: forwardTo.keySet())
+            System.out.println(s+" " + Integer.toString(forwardTo.get(s)));
+        */
         Advertiser advertiser = new Advertiser(this);
         new Thread(advertiser).start();
     }
@@ -101,25 +115,29 @@ class Router    {
                     continue;
                 double distToNodeViaThisNeighbor = neighborCosts.get(neighborIndex) + neighborDV.get(nodeIdStr);
                 if (result.containsKey(nodeIdStr))  { 
-                    if (distToNodeViaThisNeighbor < result.get(nodeIdStr))
+                    if (distToNodeViaThisNeighbor < result.get(nodeIdStr))  {
                         result.put(nodeIdStr, distToNodeViaThisNeighbor);
+                        forwardTo.put(nodeIdStr, neighborIndex+1);
+                    }
                 }
-                else
+                else    {
                     result.put(nodeIdStr, distToNodeViaThisNeighbor);
+                    forwardTo.put(nodeIdStr, neighborIndex+1);
+                }
             }
         }
         return result;
     }
 
-    private void displayRoutingTable()  {
-        int interfaceNum = 10;
+    private void displayRoutingTable()  { 
         System.out.println("host            port    distance    interface");
-        for (String neighborIdStr: distVec.keySet())    {
-            String[] neighborIdComponents = neighborIdStr.split(" ");
+        for (String nodeIdStr: distVec.keySet())    {
+            int interfaceNum = forwardTo.get(nodeIdStr);
+            String[] nodeIdComponents = nodeIdStr.split(" ");
             StringBuilder sb = new StringBuilder();
-            sb.append(neighborIdComponents[0])
-                .append("\t").append(neighborIdComponents[1])
-                .append("\t").append(distVec.get(neighborIdStr))
+            sb.append(nodeIdComponents[0])
+                .append("\t").append(nodeIdComponents[1])
+                .append("\t").append(distVec.get(nodeIdStr))
                 .append("\t").append("\t").append(interfaceNum);
             System.out.println(sb.toString());
         }
