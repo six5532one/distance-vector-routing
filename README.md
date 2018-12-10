@@ -1,4 +1,4 @@
-[Problem Statement](https://github.com/six5532one/distance-vector-routing/blob/master/specs.pdf)
+Problem Statement: https://github.com/six5532one/distance-vector-routing/blob/master/specs.pdf
 ==================================================================================================
 
 Packet Format
