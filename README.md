@@ -1,4 +1,4 @@
-To understand the algorithm, please read the `specs.pdf` file in this repo.
+To understand what is being implemented, please refer to this [problem statement](https://github.com/six5532one/distance-vector-routing/blob/master/specs.pdf).
 
 Packet Format
 ==============
