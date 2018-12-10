@@ -1,3 +1,5 @@
+To understand the algorithm, please read the `specs.pdf` file in this repo.
+
 Packet Format
 ==============
 Each advertisement has the format:
