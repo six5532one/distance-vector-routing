@@ -1,7 +1,8 @@
-To understand what is being implemented, please refer to this [problem statement](https://github.com/six5532one/distance-vector-routing/blob/master/specs.pdf).
+[Problem Statement](https://github.com/six5532one/distance-vector-routing/blob/master/specs.pdf)
+==================================================================================================
 
 Packet Format
-==============
+----------------
 Each advertisement has the format:
 ```
 A1/A2/.../Ak/<port number of router that is sending the message>/<payload>
@@ -14,7 +15,7 @@ The payload at the end of each advertisement has the format:
 ```
 
 Testing
-=======
+----------------
 To execute the routing algorithm on the topology shown [here](https://github.com/six5532one/distance-vector-routing/blob/master/sample_topology.jpg), run the following commands:
 ```
 // Node X (bern.clic.cs.columbia.edu)
